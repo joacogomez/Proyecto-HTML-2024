@@ -1,59 +1,114 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const registerContainer = document.getElementById('register-container');
-    const loginContainer = document.getElementById('login-container');
-    const themeSwitch = document.getElementById('theme-switch');
-    const successMessage = document.getElementById('success-message');
+let currentVideoIndex = 0;
+const videos = [
+  document.getElementById('video1'),
+  document.getElementById('video2'),
+  document.getElementById('video3')
+];
+const sections = [
+  document.getElementById('section1'),
+  document.getElementById('section2'),
+  document.getElementById('section3')
+];
 
-    // Activamos el form
-    registerContainer.classList.add('active');
+let observer;
 
-    // Animaciones de form
-    registerContainer.addEventListener('click', function() {
-        if (!registerContainer.classList.contains('active')) {
-            registerContainer.classList.add('active');
-            loginContainer.classList.remove('active');
-        }
-    });
+function handleIntersection(entries) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const index = sections.findIndex(section => section === entry.target);
+      if (index !== -1) {
+        restartVideo(index);
+      }
+    }
+  });
+}
 
-    loginContainer.addEventListener('click', function() {
-        if (!loginContainer.classList.contains('active')) {
-            loginContainer.classList.add('active');
-            registerContainer.classList.remove('active');
-        }
-    });
+function restartVideo(index) {
+  videos.forEach((video, i) => {
+    if (i === index) {
+      video.currentTime = 0;
+      video.play();
+    } else {
+      video.pause();
+      video.currentTime = 0;
+    }
+  });
+}
 
-    // Bug de apretar enter y que se ponga el modo oscuro
-    document.querySelectorAll('input').forEach(input => {
-        input.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-            }
-        });
-    });
+function createObserver() {
+  observer = new IntersectionObserver(handleIntersection, { threshold: 0 });
+  sections.forEach(section => observer.observe(section));
+}
 
-    // Register
-    document.getElementById('register-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        successMessage.textContent = 'Registrado con éxito';
-        successMessage.classList.add('active');
-        setTimeout(function() {
-            successMessage.classList.remove('active');
-        }, 3000);
-    });
+function destroyObserver() {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+}
 
-    // Login
-    document.getElementById('login-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        successMessage.textContent = 'Inicio de sesión con éxito';
-        successMessage.classList.add('active');
-        setTimeout(function() {
-            successMessage.classList.remove('active');
-            window.location.href = 'zapatillas.html';
-        }, 3000); 
-    });
+let startX;
+let isDragging = false;
 
-    // Animacion de color
-    themeSwitch.addEventListener('change', function() {
-        document.body.classList.toggle('dark-theme');
-    });
+function handleStart(e) {
+  startX = e.pageX || e.touches[0].pageX;
+  isDragging = true;
+}
+
+function handleMove(e) {
+  if (!isDragging) return;
+  const x = e.pageX || e.touches[0].pageX;
+  const difference = startX - x;
+  const threshold = window.innerWidth / 5;
+  if (difference > threshold) {
+    nextVideo();
+    isDragging = false;
+  } else if (difference < -threshold) {
+    prevVideo();
+    isDragging = false;
+  }
+}
+
+function handleEnd() {
+  isDragging = false;
+}
+
+document.addEventListener('mousedown', handleStart);
+document.addEventListener('touchstart', handleStart);
+document.addEventListener('mousemove', handleMove);
+document.addEventListener('touchmove', handleMove);
+document.addEventListener('mouseup', handleEnd);
+document.addEventListener('touchend', handleEnd);
+
+function showVideo(index) {
+  sections.forEach((section, i) => {
+    if (i === index) {
+      section.style.display = 'block';
+    } else {
+      section.style.display = 'none';
+    }
+  });
+
+  videos[currentVideoIndex].style.filter = 'brightness(0%)';
+  setTimeout(() => {
+    videos[currentVideoIndex].pause();
+    videos[index].style.filter = 'brightness(100%)';
+    videos[index].play();
+    currentVideoIndex = index;
+  }, 500);
+}
+
+function nextVideo() {
+  const nextIndex = (currentVideoIndex + 1) % videos.length;
+  showVideo(nextIndex);
+}
+
+function prevVideo() {
+  const prevIndex = (currentVideoIndex - 1 + videos.length) % videos.length;
+  showVideo(prevIndex);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  showVideo(currentVideoIndex);
+  createObserver();
 });
